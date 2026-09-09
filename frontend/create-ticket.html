@@ -1,1 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Ticket - Support CRM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-icon">S</div>
+
+            <div>
+                <h2>Support CRM</h2>
+                <span>Customer Support</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a href="index.html">
+                <span>▣</span>
+                Dashboard
+            </a>
+
+            <a href="create-ticket.html" class="active">
+                <span>＋</span>
+                Create Ticket
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+                <h1>Create New Ticket</h1>
+                <p>Create a new customer support ticket.</p>
+            </div>
+
+            <a href="index.html" class="secondary-btn">
+                ← Back to Dashboard
+            </a>
+
+        </header>
+
+
+        <section class="form-card">
+
+            <div class="form-header">
+                <h2>Ticket Information</h2>
+                <p>Enter the customer's issue details below.</p>
+            </div>
+
+
+            <form id="createTicketForm">
+
+                <div class="form-grid">
+
+                    <div class="form-group">
+
+                        <label for="customerName">
+                            Customer Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="customerName"
+                            name="customer_name"
+                            placeholder="Enter customer name"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="customerEmail">
+                            Customer Email
+                        </label>
+
+                        <input
+                            type="email"
+                            id="customerEmail"
+                            name="customer_email"
+                            placeholder="customer@example.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group full-width">
+
+                        <label for="subject">
+                            Issue Title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="subject"
+                            name="subject"
+                            placeholder="Briefly describe the issue"
+                            required
+                        >
+
+                    </div>
+
+
+                    <!-- EXTRA FEATURE: PRIORITY -->
+
+                    <div class="form-group">
+
+                        <label for="priority">
+                            Priority
+                        </label>
+
+                        <select id="priority" name="priority">
+
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Low">Low</option>
+
+                        </select>
+
+                        <small>
+                            High priority tickets receive faster attention.
+                        </small>
+
+                    </div>
+
+
+                    <div class="form-group full-width">
+
+                        <label for="description">
+                            Issue Description
+                        </label>
+
+                        <textarea
+                            id="description"
+                            name="description"
+                            rows="7"
+                            placeholder="Describe the customer's issue in detail..."
+                            required
+                        ></textarea>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SLA FEATURE -->
+
+                <div class="sla-info">
+
+                    <div class="sla-icon">
+                        ⏱
+                    </div>
+
+                    <div>
+
+                        <strong>SLA Tracking Enabled</strong>
+
+                        <p>
+                            The system will automatically track ticket
+                            response time and identify overdue tickets.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="form-actions">
+
+                    <a href="index.html" class="secondary-btn">
+                        Cancel
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                    >
+                        Create Ticket
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="script.js"></script>
+
+</body>
+  </html>
