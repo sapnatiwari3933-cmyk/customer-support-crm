@@ -3,196 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support CRM - Dashboard</title>
+
+    <title>SupportDesk CRM</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <div class="app">
+<div class="app">
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar">
-            <div class="logo">
-                <div class="logo-icon">S</div>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <div>
+                <h2>SupportDesk</h2>
+                <span>Customer CRM</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a href="index.html" class="nav-item active">
+                <span>▣</span>
+                Dashboard
+            </a>
+
+            <a href="create-ticket.html" class="nav-item">
+                <span>＋</span>
+                Create Ticket
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="status-dot"></div>
+            <div>
+                <strong>System Online</strong>
+                <small>Support workspace</small>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+
+            <div>
+                <p class="eyebrow">CUSTOMER SUPPORT</p>
+                <h1>Ticket Dashboard</h1>
+                <p class="subtitle">
+                    Manage, search and track customer support tickets.
+                </p>
+            </div>
+
+            <a href="create-ticket.html" class="primary-btn">
+                <span>＋</span>
+                New Ticket
+            </a>
+
+        </header>
+
+
+        <!-- STATS -->
+        <section class="stats-grid">
+
+            <div class="stat-card">
+                <div class="stat-icon">▣</div>
                 <div>
-                    <h2>Support CRM</h2>
-                    <span>Customer Support</span>
+                    <span>Total Tickets</span>
+                    <strong id="totalTickets">0</strong>
                 </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <a href="index.html" class="active">
-                    <span>▣</span>
-                    Dashboard
-                </a>
-
-                <a href="create-ticket.html">
-                    <span>＋</span>
-                    Create Ticket
-                </a>
-            </nav>
-
-            <div class="sidebar-bottom">
-                <div class="help-box">
-                    <strong>Need Help?</strong>
-                    <p>Manage customer tickets easily.</p>
+            <div class="stat-card">
+                <div class="stat-icon open-icon">●</div>
+                <div>
+                    <span>Open</span>
+                    <strong id="openTickets">0</strong>
                 </div>
             </div>
-        </aside>
 
-
-        <!-- MAIN CONTENT -->
-        <main class="main-content">
-
-            <!-- TOP BAR -->
-            <header class="topbar">
+            <div class="stat-card">
+                <div class="stat-icon progress-icon">◐</div>
                 <div>
-                    <h1>Dashboard</h1>
-                    <p>Manage and track customer support tickets.</p>
+                    <span>In Progress</span>
+                    <strong id="progressTickets">0</strong>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon closed-icon">✓</div>
+                <div>
+                    <span>Closed</span>
+                    <strong id="closedTickets">0</strong>
+                </div>
+            </div>
+
+            <div class="stat-card overdue-card">
+                <div class="stat-icon overdue-icon">!</div>
+                <div>
+                    <span>SLA Overdue</span>
+                    <strong id="overdueTickets">0</strong>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- TICKETS SECTION -->
+        <section class="tickets-section">
+
+            <div class="section-header">
+
+                <div>
+                    <h2>All Support Tickets</h2>
+                    <p>Search and filter customer issues.</p>
                 </div>
 
-                <a href="create-ticket.html" class="primary-btn">
-                    + New Ticket
-                </a>
-            </header>
+            </div>
 
 
-            <!-- STATS -->
-            <section class="stats-grid">
+            <!-- FILTERS -->
+            <div class="filter-bar">
 
-                <div class="stat-card">
-                    <div class="stat-icon">▣</div>
-                    <div>
-                        <span>Total Tickets</span>
-                        <h2 id="totalTickets">0</h2>
-                    </div>
-                </div>
+                <div class="search-box">
 
-                <div class="stat-card">
-                    <div class="stat-icon open-icon">●</div>
-                    <div>
-                        <span>Open</span>
-                        <h2 id="openTickets">0</h2>
-                    </div>
-                </div>
+                    <span class="search-icon">⌕</span>
 
-                <div class="stat-card">
-                    <div class="stat-icon progress-icon">◐</div>
-                    <div>
-                        <span>In Progress</span>
-                        <h2 id="progressTickets">0</h2>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon closed-icon">✓</div>
-                    <div>
-                        <span>Closed</span>
-                        <h2 id="closedTickets">0</h2>
-                    </div>
-                </div>
-
-                <!-- EXTRA FEATURE -->
-                <div class="stat-card alert-card">
-                    <div class="stat-icon alert-icon">!</div>
-                    <div>
-                        <span>Overdue</span>
-                        <h2 id="overdueTickets">0</h2>
-                    </div>
-                </div>
-
-            </section>
-
-
-            <!-- TICKET SECTION -->
-            <section class="ticket-section">
-
-                <div class="section-header">
-                    <div>
-                        <h2>All Tickets</h2>
-                        <p>Search, filter and manage support tickets.</p>
-                    </div>
-                </div>
-
-
-                <!-- SEARCH & FILTER -->
-                <div class="filters">
-
-                    <div class="search-box">
-                        <span>⌕</span>
-                        <input
-                            type="text"
-                            id="searchInput"
-                            placeholder="Search by customer, email, ticket ID or issue..."
-                        >
-                    </div>
-
-                    <select id="statusFilter">
-                        <option value="All">All Status</option>
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Closed">Closed</option>
-                    </select>
-
-                    <select id="priorityFilter">
-                        <option value="All">All Priority</option>
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                    </select>
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search name, email, ticket ID or issue..."
+                        autocomplete="off"
+                    >
 
                 </div>
 
 
-                <!-- TICKET TABLE -->
-                <div class="table-container">
+                <select id="statusFilter">
 
-                    <table>
+                    <option value="All">All Status</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Closed">Closed</option>
 
-                        <thead>
-                            <tr>
-                                <th>Ticket</th>
-                                <th>Customer</th>
-                                <th>Issue</th>
-                                <th>Status</th>
-                                <th>Priority</th>
-                                <th>SLA</th>
-                                <th>Created</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
+                </select>
 
-                        <tbody id="ticketTableBody">
 
-                            <tr>
-                                <td colspan="8" class="empty-state">
-                                    <div class="empty-icon">▣</div>
-                                    <h3>No tickets yet</h3>
-                                    <p>Create your first support ticket to get started.</p>
+                <select id="priorityFilter">
 
-                                    <a href="create-ticket.html" class="primary-btn">
-                                        + Create Ticket
-                                    </a>
-                                </td>
-                            </tr>
+                    <option value="All">All Priority</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
 
-                        </tbody>
+                </select>
 
-                    </table>
+            </div>
+
+
+            <!-- TABLE -->
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Customer</th>
+                            <th>Issue</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>SLA</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="ticketTableBody">
+
+                        <!-- Tickets inserted by JavaScript -->
+
+                    </tbody>
+
+                </table>
+
+
+                <!-- EMPTY STATE -->
+                <div id="emptyState" class="empty-state">
+
+                    <div class="empty-icon">⌕</div>
+
+                    <h3>No tickets found</h3>
+
+                    <p>
+                        Try changing your search or filters,
+                        or create a new support ticket.
+                    </p>
+
+                    <a href="create-ticket.html" class="secondary-btn">
+                        Create Ticket
+                    </a>
 
                 </div>
 
-            </section>
+            </div>
 
-        </main>
-
-    </div>
+        </section>
 
 
-    <!-- JAVASCRIPT -->
-    <script src="script.js"></script>
+        <!-- FOOTER -->
+        <footer class="footer">
+
+            <span>SupportDesk CRM</span>
+
+            <span>
+                Customer Support Ticketing System
+            </span>
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<script src="script.js"></script>
 
 </body>
-  </html>
+</html>
