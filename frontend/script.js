@@ -1,17 +1,28 @@
+/* =========================================================
+   SUPPORTDESK CRM
+   MAIN JAVASCRIPT
+========================================================= */
+
 "use strict";
 
+
 /* =========================================================
-   SUPPORT CRM - FRONTEND JAVASCRIPT
+   API CONFIGURATION
 ========================================================= */
 
 const API_BASE = "http://localhost:5000/api/tickets";
 
-let tickets = [];
+
+/* =========================================================
+   LOCAL STORAGE
+   Temporary frontend storage until backend is connected
+========================================================= */
+
+const STORAGE_KEY = "supportdesk_tickets";
 
 
 /* =========================================================
    SAMPLE TICKETS
-   Used until backend/database is connected
 ========================================================= */
 
 const sampleTickets = [
@@ -20,60 +31,266 @@ const sampleTickets = [
         customer_name: "Rahul Sharma",
         customer_email: "rahul@example.com",
         subject: "Payment failed",
-        description: "Customer is unable to complete the payment.",
-        status: "Open",
+        description: "Customer is unable to complete payment.",
         priority: "High",
+        status: "Open",
         created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         notes: []
     },
+
     {
         ticket_id: "TCK-1002",
         customer_name: "Priya Singh",
         customer_email: "priya@example.com",
         subject: "Unable to login",
         description: "Customer cannot login to the account.",
-        status: "In Progress",
         priority: "Medium",
+        status: "In Progress",
         created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
-        notes: []
+        updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        notes: [
+            {
+                note_text: "Support team is checking the account.",
+                created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+            }
+        ]
     },
+
     {
         ticket_id: "TCK-1003",
         customer_name: "Amit Verma",
         customer_email: "amit@example.com",
         subject: "Refund not received",
         description: "Customer has not received the expected refund.",
-        status: "Closed",
         priority: "Low",
-        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
-        notes: []
+        status: "Closed",
+        created_at: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+        notes: [
+            {
+                note_text: "Refund was successfully processed.",
+                created_at: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString()
+            }
+        ]
     }
 ];
 
 
 /* =========================================================
-   INITIALIZE
+   SLA RULES
 ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+const SLA_HOURS = {
+    High: 4,
+    Medium: 8,
+    Low: 24
+};
 
-    if (document.getElementById("ticketTableBody")) {
-        loadTickets();
+
+/* =========================================================
+   HELPER FUNCTIONS
+========================================================= */
+
+function getStoredTickets() {
+
+    try {
+
+        const data = localStorage.getItem(STORAGE_KEY);
+
+        if (!data) {
+            return [];
+        }
+
+        return JSON.parse(data);
+
+    } catch (error) {
+
+        console.error("Local storage error:", error);
+
+        return [];
+    }
+}
+
+
+function saveStoredTickets(tickets) {
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(tickets)
+    );
+}
+
+
+function getAllLocalTickets() {
+
+    const stored = getStoredTickets();
+
+    if (stored.length === 0) {
+
+        saveStoredTickets(sampleTickets);
+
+        return [...sampleTickets];
     }
 
-    if (document.getElementById("createTicketForm")) {
-        setupCreateTicketForm();
+    return stored;
+}
+
+
+function escapeHTML(value) {
+
+    if (value === null || value === undefined) {
+        return "";
     }
 
-    if (document.getElementById("saveChangesBtn")) {
-        loadTicketDetails();
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatDate(dateValue) {
+
+    if (!dateValue) {
+        return "—";
     }
 
-    setupSearchAndFilters();
-});
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+
+function generateTicketId() {
+
+    const tickets = getAllLocalTickets();
+
+    let highestNumber = 1000;
+
+    tickets.forEach(ticket => {
+
+        const match = String(ticket.ticket_id || "")
+            .match(/TCK-(\d+)/);
+
+        if (match) {
+
+            const number = Number(match[1]);
+
+            if (number > highestNumber) {
+                highestNumber = number;
+            }
+        }
+    });
+
+    return `TCK-${highestNumber + 1}`;
+}
+
+
+function getSLAInfo(ticket) {
+
+    if (!ticket) {
+        return {
+            label: "Unknown",
+            className: "sla-warning"
+        };
+    }
+
+    if (ticket.status === "Closed") {
+
+        return {
+            label: "Resolved",
+            className: "sla-ok"
+        };
+    }
+
+    const priority = ticket.priority || "Medium";
+
+    const slaHours = SLA_HOURS[priority] || 8;
+
+    const created = new Date(ticket.created_at);
+
+    const deadline =
+        created.getTime() +
+        slaHours * 60 * 60 * 1000;
+
+    const now = Date.now();
+
+    const remaining =
+        deadline - now;
+
+    if (remaining <= 0) {
+
+        return {
+            label: "Overdue",
+            className: "sla-overdue"
+        };
+    }
+
+    const hoursLeft =
+        Math.floor(remaining / (60 * 60 * 1000));
+
+    if (hoursLeft < 2) {
+
+        return {
+            label: `${hoursLeft}h left`,
+            className: "sla-warning"
+        };
+    }
+
+    return {
+        label: `${hoursLeft}h left`,
+        className: "sla-ok"
+    };
+}
+
+
+function getStatusClass(status) {
+
+    if (status === "Open") {
+        return "status-open";
+    }
+
+    if (status === "In Progress") {
+        return "status-progress";
+    }
+
+    if (status === "Closed") {
+        return "status-closed";
+    }
+
+    return "status-open";
+}
+
+
+function getPriorityClass(priority) {
+
+    if (priority === "High") {
+        return "priority-high";
+    }
+
+    if (priority === "Medium") {
+        return "priority-medium";
+    }
+
+    if (priority === "Low") {
+        return "priority-low";
+    }
+
+    return "priority-medium";
+}
 
 
 /* =========================================================
@@ -82,27 +299,66 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadTickets() {
 
+    let tickets = [];
+
     try {
 
         const response = await fetch(API_BASE);
 
         if (!response.ok) {
-            throw new Error("Backend unavailable");
+            throw new Error("API unavailable");
         }
 
-        const data = await response.json();
+        tickets = await response.json();
 
-        tickets = Array.isArray(data) ? data : data.tickets || [];
+        if (!Array.isArray(tickets)) {
+            tickets = [];
+        }
+
+        /*
+         * Keep local tickets too.
+         * This prevents tickets created in the browser
+         * from disappearing when API data is loaded.
+         */
+
+        const localTickets = getStoredTickets();
+
+        const combined = [
+            ...tickets,
+            ...localTickets
+        ];
+
+        const uniqueTickets = [];
+
+        const ids = new Set();
+
+        combined.forEach(ticket => {
+
+            if (!ticket.ticket_id) {
+                return;
+            }
+
+            if (!ids.has(ticket.ticket_id)) {
+
+                ids.add(ticket.ticket_id);
+
+                uniqueTickets.push(ticket);
+            }
+        });
+
+        tickets = uniqueTickets;
 
     } catch (error) {
 
-        console.log("Using sample tickets until backend is connected.");
+        console.log(
+            "Backend unavailable. Using local data."
+        );
 
-        tickets = [...sampleTickets];
+        tickets = getAllLocalTickets();
     }
 
     renderTickets(tickets);
-    updateDashboardStats(tickets);
+    updateStats(tickets);
 }
 
 
@@ -110,267 +366,304 @@ async function loadTickets() {
    RENDER TICKETS
 ========================================================= */
 
-function renderTickets(ticketList) {
+function renderTickets(tickets) {
 
-    const tableBody = document.getElementById("ticketTableBody");
+    const tableBody =
+        document.getElementById("ticketTableBody");
+
+    const emptyState =
+        document.getElementById("emptyState");
 
     if (!tableBody) {
         return;
     }
 
-    if (ticketList.length === 0) {
+    tableBody.innerHTML = "";
 
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8" class="empty-state">
 
-                    <div class="empty-icon">▣</div>
+    if (!tickets || tickets.length === 0) {
 
-                    <h3>No tickets found</h3>
-
-                    <p>
-                        Try changing your search or filter.
-                    </p>
-
-                </td>
-            </tr>
-        `;
+        if (emptyState) {
+            emptyState.style.display = "block";
+        }
 
         return;
     }
 
 
-    tableBody.innerHTML = ticketList.map(ticket => {
+    if (emptyState) {
+        emptyState.style.display = "none";
+    }
 
-        const sla = calculateSLA(ticket);
 
-        return `
-            <tr>
+    tickets.forEach(ticket => {
 
-                <td>
-                    <strong>${escapeHTML(ticket.ticket_id)}</strong>
-                </td>
+        const row =
+            document.createElement("tr");
 
-                <td>
-                    <strong>${escapeHTML(ticket.customer_name)}</strong>
-                    <br>
-                    <small>${escapeHTML(ticket.customer_email)}</small>
-                </td>
+        const sla =
+            getSLAInfo(ticket);
 
-                <td>
+        const statusClass =
+            getStatusClass(ticket.status);
+
+        const priorityClass =
+            getPriorityClass(ticket.priority);
+
+
+        row.innerHTML = `
+
+            <td>
+                <div class="ticket-number">
+                    ${escapeHTML(ticket.ticket_id)}
+                </div>
+            </td>
+
+
+            <td>
+
+                <div class="customer-name">
+                    ${escapeHTML(ticket.customer_name)}
+                </div>
+
+                <div class="customer-email">
+                    ${escapeHTML(ticket.customer_email)}
+                </div>
+
+            </td>
+
+
+            <td>
+
+                <div class="issue-title">
                     ${escapeHTML(ticket.subject)}
-                </td>
+                </div>
 
-                <td>
-                    <span class="status-badge ${getStatusClass(ticket.status)}">
-                        ${escapeHTML(ticket.status)}
-                    </span>
-                </td>
+                <div class="issue-description">
+                    ${escapeHTML(ticket.description)}
+                </div>
 
-                <td>
-                    <span class="priority-badge ${getPriorityClass(ticket.priority)}">
-                        ${escapeHTML(ticket.priority || "Medium")}
-                    </span>
-                </td>
+            </td>
 
-                <td>
-                    <span class="sla-badge ${sla.overdue ? "overdue" : ""}">
-                        ${sla.overdue ? "Overdue" : "Within SLA"}
-                    </span>
-                </td>
 
-                <td>
-                    ${formatDate(ticket.created_at)}
-                </td>
+            <td>
 
-                <td>
-                    <a
-                        href="ticket-details.html?id=${encodeURIComponent(ticket.ticket_id)}"
-                        class="secondary-btn"
-                    >
-                        View
-                    </a>
-                </td>
+                <span class="priority-badge ${priorityClass}">
+                    ${escapeHTML(ticket.priority || "Medium")}
+                </span>
 
-            </tr>
+            </td>
+
+
+            <td>
+
+                <span class="status-badge ${statusClass}">
+                    ${escapeHTML(ticket.status || "Open")}
+                </span>
+
+            </td>
+
+
+            <td>
+
+                <span class="sla-badge ${sla.className}">
+                    ${escapeHTML(sla.label)}
+                </span>
+
+            </td>
+
+
+            <td>
+                ${formatDate(ticket.created_at)}
+            </td>
+
+
+            <td>
+
+                <a
+                    href="ticket-details.html?id=${encodeURIComponent(ticket.ticket_id)}"
+                    class="view-btn"
+                >
+                    View
+                </a>
+
+            </td>
+
         `;
 
-    }).join("");
+
+        tableBody.appendChild(row);
+    });
 }
 
 
 /* =========================================================
-   DASHBOARD STATISTICS
+   DASHBOARD STATS
 ========================================================= */
 
-function updateDashboardStats(ticketList) {
+function updateStats(tickets) {
 
-    const total = ticketList.length;
+    const total =
+        document.getElementById("totalTickets");
 
-    const open = ticketList.filter(
-        ticket => ticket.status === "Open"
-    ).length;
+    const open =
+        document.getElementById("openTickets");
 
-    const progress = ticketList.filter(
-        ticket => ticket.status === "In Progress"
-    ).length;
+    const progress =
+        document.getElementById("progressTickets");
 
-    const closed = ticketList.filter(
-        ticket => ticket.status === "Closed"
-    ).length;
+    const closed =
+        document.getElementById("closedTickets");
 
-    const overdue = ticketList.filter(
-        ticket => calculateSLA(ticket).overdue
-    ).length;
+    const overdue =
+        document.getElementById("overdueTickets");
 
 
-    setText("totalTickets", total);
-    setText("openTickets", open);
-    setText("progressTickets", progress);
-    setText("closedTickets", closed);
-    setText("overdueTickets", overdue);
+    if (!total) {
+        return;
+    }
+
+
+    const allTickets =
+        Array.isArray(tickets)
+            ? tickets
+            : [];
+
+
+    const openCount =
+        allTickets.filter(
+            ticket => ticket.status === "Open"
+        ).length;
+
+
+    const progressCount =
+        allTickets.filter(
+            ticket => ticket.status === "In Progress"
+        ).length;
+
+
+    const closedCount =
+        allTickets.filter(
+            ticket => ticket.status === "Closed"
+        ).length;
+
+
+    const overdueCount =
+        allTickets.filter(
+            ticket =>
+                getSLAInfo(ticket).label === "Overdue"
+        ).length;
+
+
+    total.textContent =
+        allTickets.length;
+
+    open.textContent =
+        openCount;
+
+    progress.textContent =
+        progressCount;
+
+    closed.textContent =
+        closedCount;
+
+    if (overdue) {
+        overdue.textContent =
+            overdueCount;
+    }
 }
 
 
 /* =========================================================
-   SEARCH & FILTER
+   FILTER + SEARCH
 ========================================================= */
-
-function setupSearchAndFilters() {
-
-    const searchInput = document.getElementById("searchInput");
-    const statusFilter = document.getElementById("statusFilter");
-    const priorityFilter = document.getElementById("priorityFilter");
-
-
-    if (searchInput) {
-        searchInput.addEventListener("input", applyFilters);
-    }
-
-    if (statusFilter) {
-        statusFilter.addEventListener("change", applyFilters);
-    }
-
-    if (priorityFilter) {
-        priorityFilter.addEventListener("change", applyFilters);
-    }
-}
-
 
 function applyFilters() {
 
-    const searchInput = document.getElementById("searchInput");
-    const statusFilter = document.getElementById("statusFilter");
-    const priorityFilter = document.getElementById("priorityFilter");
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const statusFilter =
+        document.getElementById("statusFilter");
+
+    const priorityFilter =
+        document.getElementById("priorityFilter");
 
 
-    const search = searchInput
-        ? searchInput.value.toLowerCase().trim()
-        : "";
-
-    const status = statusFilter
-        ? statusFilter.value
-        : "All";
-
-    const priority = priorityFilter
-        ? priorityFilter.value
-        : "All";
+    if (!searchInput) {
+        return;
+    }
 
 
-    const filtered = tickets.filter(ticket => {
-
-        const searchableText = `
-            ${ticket.ticket_id}
-            ${ticket.customer_name}
-            ${ticket.customer_email}
-            ${ticket.subject}
-            ${ticket.description}
-        `.toLowerCase();
+    const search =
+        searchInput.value
+            .trim()
+            .toLowerCase();
 
 
-        const matchesSearch =
-            !search ||
-            searchableText.includes(search);
+    const status =
+        statusFilter
+            ? statusFilter.value
+            : "All";
 
 
-        const matchesStatus =
-            status === "All" ||
-            ticket.status === status;
+    const priority =
+        priorityFilter
+            ? priorityFilter.value
+            : "All";
 
 
-        const matchesPriority =
-            priority === "All" ||
-            (ticket.priority || "Medium") === priority;
+    const tickets =
+        getAllLocalTickets();
 
 
-        return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesPriority
-        );
-    });
+    const filtered =
+        tickets.filter(ticket => {
+
+            const searchableText = [
+
+                ticket.ticket_id,
+
+                ticket.customer_name,
+
+                ticket.customer_email,
+
+                ticket.subject,
+
+                ticket.description
+
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+
+            const matchesSearch =
+                !search ||
+                searchableText.includes(search);
+
+
+            const matchesStatus =
+                status === "All" ||
+                ticket.status === status;
+
+
+            const matchesPriority =
+                priority === "All" ||
+                ticket.priority === priority;
+
+
+            return (
+                matchesSearch &&
+                matchesStatus &&
+                matchesPriority
+            );
+        });
 
 
     renderTickets(filtered);
-}
 
-
-/* =========================================================
-   SLA SYSTEM
-========================================================= */
-
-/*
-   SLA rules:
-
-   High   = 4 hours
-   Medium = 8 hours
-   Low    = 24 hours
-
-   Closed tickets are never considered overdue.
-*/
-
-function calculateSLA(ticket) {
-
-    if (ticket.status === "Closed") {
-
-        return {
-            overdue: false,
-            remaining: "Closed"
-        };
-    }
-
-
-    const createdTime = new Date(ticket.created_at).getTime();
-
-    const now = Date.now();
-
-    const priority = ticket.priority || "Medium";
-
-
-    let slaHours = 8;
-
-
-    if (priority === "High") {
-        slaHours = 4;
-    }
-
-    if (priority === "Low") {
-        slaHours = 24;
-    }
-
-
-    const deadline =
-        createdTime + slaHours * 60 * 60 * 1000;
-
-
-    const remaining =
-        deadline - now;
-
-
-    return {
-        overdue: remaining < 0,
-        remaining: remaining
-    };
+    updateStats(tickets);
 }
 
 
@@ -378,156 +671,180 @@ function calculateSLA(ticket) {
    CREATE TICKET
 ========================================================= */
 
-function setupCreateTicketForm() {
+async function createTicket(event) {
 
-    const form = document.getElementById("createTicketForm");
+    event.preventDefault();
 
-    if (!form) {
+
+    const customerName =
+        document.getElementById("customerName");
+
+    const customerEmail =
+        document.getElementById("customerEmail");
+
+    const subject =
+        document.getElementById("subject");
+
+    const priority =
+        document.getElementById("priority");
+
+    const description =
+        document.getElementById("description");
+
+
+    if (
+        !customerName ||
+        !customerEmail ||
+        !subject ||
+        !priority ||
+        !description
+    ) {
         return;
     }
 
 
-    form.addEventListener("submit", async event => {
-
-        event.preventDefault();
-
-
-        const customerName =
-            document.getElementById("customerName").value.trim();
-
-        const customerEmail =
-            document.getElementById("customerEmail").value.trim();
-
-        const subject =
-            document.getElementById("subject").value.trim();
-
-        const priority =
-            document.getElementById("priority").value;
-
-        const description =
-            document.getElementById("description").value.trim();
+    const now =
+        new Date().toISOString();
 
 
-        const ticketData = {
+    const newTicket = {
 
-            customer_name: customerName,
+        ticket_id: generateTicketId(),
 
-            customer_email: customerEmail,
+        customer_name:
+            customerName.value.trim(),
 
-            subject: subject,
+        customer_email:
+            customerEmail.value.trim(),
 
-            description: description,
+        subject:
+            subject.value.trim(),
 
-            priority: priority
+        description:
+            description.value.trim(),
 
-        };
+        priority:
+            priority.value,
+
+        status:
+            "Open",
+
+        created_at:
+            now,
+
+        updated_at:
+            now,
+
+        notes: []
+    };
 
 
-        try {
+    if (
+        !newTicket.customer_name ||
+        !newTicket.customer_email ||
+        !newTicket.subject ||
+        !newTicket.description
+    ) {
 
-            const response = await fetch(API_BASE, {
+        alert(
+            "Please fill all required fields."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(API_BASE, {
 
                 method: "POST",
 
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type":
+                        "application/json"
                 },
 
-                body: JSON.stringify(ticketData)
+                body: JSON.stringify({
 
+                    customer_name:
+                        newTicket.customer_name,
+
+                    customer_email:
+                        newTicket.customer_email,
+
+                    subject:
+                        newTicket.subject,
+
+                    description:
+                        newTicket.description,
+
+                    priority:
+                        newTicket.priority
+
+                })
             });
 
 
-            if (!response.ok) {
-                throw new Error("Unable to create ticket");
-            }
+        if (response.ok) {
 
+            const result =
+                await response.json();
 
-            alert("Ticket created successfully!");
-
-            window.location.href = "index.html";
-
-
-        } catch (error) {
-
-            /*
-               Demo mode:
-               Save ticket locally until backend is available.
-            */
-
-            const newTicket = {
-
-                ticket_id:
-                    "TCK-" +
-                    Math.floor(1000 + Math.random() * 9000),
-
-                customer_name: customerName,
-
-                customer_email: customerEmail,
-
-                subject: subject,
-
-                description: description,
-
-                status: "Open",
-
-                priority: priority,
-
-                created_at: new Date().toISOString(),
-
-                updated_at: new Date().toISOString(),
-
-                notes: []
-
-            };
-
-
-            const storedTickets =
-                JSON.parse(
-                    localStorage.getItem("crmTickets") || "[]"
-                );
-
-
-            storedTickets.push(newTicket);
-
-
-            localStorage.setItem(
-                "crmTickets",
-                JSON.stringify(storedTickets)
-            );
+            const ticketId =
+                result.ticket_id ||
+                newTicket.ticket_id;
 
 
             alert(
-                "Ticket created successfully in demo mode!"
+                `Ticket ${ticketId} created successfully!`
             );
 
-            window.location.href = "index.html";
+
+            window.location.href =
+                `ticket-details.html?id=${encodeURIComponent(ticketId)}`;
+
+            return;
         }
 
-    });
+    } catch (error) {
+
+        console.log(
+            "Backend unavailable. Saving locally."
+        );
+    }
+
+
+    /*
+     * Local fallback
+     */
+
+    const tickets =
+        getAllLocalTickets();
+
+
+    tickets.unshift(newTicket);
+
+
+    saveStoredTickets(tickets);
+
+
+    alert(
+        `Ticket ${newTicket.ticket_id} created successfully!`
+    );
+
+
+    window.location.href =
+        `ticket-details.html?id=${encodeURIComponent(newTicket.ticket_id)}`;
 }
 
 
 /* =========================================================
-   LOAD TICKET DETAILS
+   GET SINGLE TICKET
 ========================================================= */
 
-async function loadTicketDetails() {
-
-    const params = new URLSearchParams(
-        window.location.search
-    );
-
-    const ticketId = params.get("id");
-
-
-    if (!ticketId) {
-        return;
-    }
-
-
-    let ticket = null;
-
+async function getTicket(ticketId) {
 
     try {
 
@@ -537,371 +854,173 @@ async function loadTicketDetails() {
             );
 
 
-        if (!response.ok) {
-            throw new Error("Ticket not found");
+        if (response.ok) {
+
+            const ticket =
+                await response.json();
+
+            return ticket;
         }
-
-
-        ticket = await response.json();
 
     } catch (error) {
 
-        const allTickets = [
-            ...sampleTickets,
-            ...JSON.parse(
-                localStorage.getItem("crmTickets") || "[]"
-            )
-        ];
-
-
-        ticket = allTickets.find(
-            item => item.ticket_id === ticketId
+        console.log(
+            "Backend unavailable."
         );
     }
+
+
+    const tickets =
+        getAllLocalTickets();
+
+
+    return tickets.find(
+        ticket =>
+            ticket.ticket_id === ticketId
+    );
+}
+
+
+/* =========================================================
+   RENDER TICKET DETAILS
+========================================================= */
+
+async function loadTicketDetails() {
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const ticketId =
+        params.get("id");
+
+
+    if (!ticketId) {
+
+        alert("Ticket ID is missing.");
+
+        window.location.href =
+            "index.html";
+
+        return;
+    }
+
+
+    const ticket =
+        await getTicket(ticketId);
 
 
     if (!ticket) {
 
-        alert("Ticket not found.");
+        document.title =
+            "Ticket Not Found";
 
-        window.location.href = "index.html";
+        const ticketIdElement =
+            document.getElementById("ticketId");
+
+        if (ticketIdElement) {
+            ticketIdElement.textContent =
+                "Ticket not found";
+        }
 
         return;
     }
 
 
-    displayTicketDetails(ticket);
-}
+    const ticketIdElement =
+        document.getElementById("ticketId");
 
+    const customerNameElement =
+        document.getElementById("customerName");
 
-/* =========================================================
-   DISPLAY TICKET DETAILS
-========================================================= */
+    const customerEmailElement =
+        document.getElementById("customerEmail");
 
-function displayTicketDetails(ticket) {
+    const subjectElement =
+        document.getElementById("subject");
 
-    setText("ticketId", ticket.ticket_id);
-
-    setText("customerName", ticket.customer_name);
-
-    setText("customerEmail", ticket.customer_email);
-
-    setText("subject", ticket.subject);
-
-    setText("description", ticket.description);
-
-    setText("createdAt", formatDate(ticket.created_at));
-
-    setText("updatedAt", formatDate(ticket.updated_at));
-
-
-    const statusSelect =
-        document.getElementById("status");
-
-
-    if (statusSelect) {
-        statusSelect.value =
-            ticket.status || "Open";
-    }
-
+    const descriptionElement =
+        document.getElementById("description");
 
     const priorityElement =
         document.getElementById("ticketPriority");
 
+    const slaElement =
+        document.getElementById("slaStatus");
+
+    const statusElement =
+        document.getElementById("status");
+
+    const createdAtElement =
+        document.getElementById("createdAt");
+
+    const updatedAtElement =
+        document.getElementById("updatedAt");
+
+
+    if (ticketIdElement) {
+        ticketIdElement.textContent =
+            ticket.ticket_id;
+    }
+
+    if (customerNameElement) {
+        customerNameElement.textContent =
+            ticket.customer_name;
+    }
+
+    if (customerEmailElement) {
+        customerEmailElement.textContent =
+            ticket.customer_email;
+    }
+
+    if (subjectElement) {
+        subjectElement.textContent =
+            ticket.subject;
+    }
+
+    if (descriptionElement) {
+        descriptionElement.textContent =
+            ticket.description;
+    }
 
     if (priorityElement) {
 
-        const priority =
-            ticket.priority || "Medium";
+        priorityElement.innerHTML = `
 
-        priorityElement.textContent = priority;
+            <span class="priority-badge ${getPriorityClass(ticket.priority)}">
+                ${escapeHTML(ticket.priority || "Medium")}
+            </span>
 
-        priorityElement.className =
-            `priority-badge ${getPriorityClass(priority)}`;
+        `;
     }
-
-
-    const slaElement =
-        document.getElementById("slaStatus");
 
 
     if (slaElement) {
 
-        const sla = calculateSLA(ticket);
-
-        slaElement.textContent =
-            sla.overdue
-                ? "Overdue"
-                : "Within SLA";
-
-        slaElement.className =
-            `sla-badge ${sla.overdue ? "overdue" : ""}`;
-    }
+        const sla =
+            getSLAInfo(ticket);
 
 
-    renderNotes(ticket.notes || []);
+        slaElement.innerHTML = `
 
+            <span class="sla-badge ${sla.className}">
+                ${escapeHTML(sla.label)}
+            </span>
 
-    const saveButton =
-        document.getElementById("saveChangesBtn");
-
-
-    if (saveButton) {
-
-        saveButton.onclick = () =>
-            saveTicketChanges(ticket);
-    }
-}
-
-
-/* =========================================================
-   SAVE TICKET CHANGES
-========================================================= */
-
-async function saveTicketChanges(ticket) {
-
-    const status =
-        document.getElementById("status").value;
-
-    const note =
-        document.getElementById("newNote").value.trim();
-
-
-    const updateData = {
-
-        status: status,
-
-        notes: note
-
-    };
-
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_BASE}/${encodeURIComponent(ticket.ticket_id)}`,
-                {
-                    method: "PUT",
-
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-
-                    body: JSON.stringify(updateData)
-                }
-            );
-
-
-        if (!response.ok) {
-            throw new Error("Backend unavailable");
-        }
-
-
-        alert("Ticket updated successfully!");
-
-        location.reload();
-
-
-    } catch (error) {
-
-        /*
-           Demo mode
-        */
-
-        ticket.status = status;
-
-        ticket.updated_at =
-            new Date().toISOString();
-
-
-        if (note) {
-
-            ticket.notes =
-                ticket.notes || [];
-
-            ticket.notes.push({
-
-                note_text: note,
-
-                created_at:
-                    new Date().toISOString()
-
-            });
-        }
-
-
-        updateLocalTicket(ticket);
-
-
-        alert(
-            "Ticket updated successfully in demo mode!"
-        );
-
-        location.reload();
-    }
-}
-
-
-/* =========================================================
-   NOTES
-========================================================= */
-
-function renderNotes(notes) {
-
-    const container =
-        document.getElementById("notesContainer");
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!notes || notes.length === 0) {
-
-        container.innerHTML = `
-            <div class="empty-notes">
-                No notes added yet.
-            </div>
         `;
-
-        return;
     }
 
 
-    container.innerHTML =
-        notes.map(note => `
+    if (statusElement) {
 
-            <div class="note">
-
-                <p>
-                    ${escapeHTML(
-                        note.note_text || ""
-                    )}
-                </p>
-
-                <small>
-                    ${formatDate(note.created_at)}
-                </small>
-
-            </div>
-
-        `).join("");
-}
-
-
-/* =========================================================
-   LOCAL STORAGE
-========================================================= */
-
-function updateLocalTicket(ticket) {
-
-    const storedTickets =
-        JSON.parse(
-            localStorage.getItem("crmTickets") || "[]"
-        );
-
-
-    const index =
-        storedTickets.findIndex(
-            item =>
-                item.ticket_id === ticket.ticket_id
-        );
-
-
-    if (index !== -1) {
-
-        storedTickets[index] = ticket;
-
-    } else {
-
-        storedTickets.push(ticket);
+        statusElement.value =
+            ticket.status || "Open";
     }
 
 
-    localStorage.setItem(
-        "crmTickets",
-        JSON.stringify(storedTickets)
-    );
-}
+    if (createdAtElement) {
 
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function getStatusClass(status) {
-
-    if (status === "In Progress") {
-        return "progress";
-    }
-
-    if (status === "Closed") {
-        return "closed";
-    }
-
-    return "open";
-}
-
-
-function getPriorityClass(priority) {
-
-    if (priority === "High") {
-        return "high";
-    }
-
-    if (priority === "Low") {
-        return "low";
-    }
-
-    return "medium";
-}
-
-
-function formatDate(date) {
-
-    if (!date) {
-        return "-";
-    }
-
-
-    const parsedDate = new Date(date);
-
-
-    if (Number.isNaN(parsedDate.getTime())) {
-        return "-";
-    }
-
-
-    return parsedDate.toLocaleString(
-        "en-IN",
-        {
-            dateStyle: "medium",
-            timeStyle: "short"
-        }
-    );
-}
-
-
-function setText(id, value) {
-
-    const element =
-        document.getElementById(id);
-
-
-    if (element) {
-        element.textContent = value ?? "-";
-    }
-}
-
-
-function escapeHTML(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-      }
+        createdAtElement.textContent =
+     
