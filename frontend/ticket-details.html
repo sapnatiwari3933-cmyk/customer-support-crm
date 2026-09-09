@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Details - Support CRM</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Ticket Details - SupportDesk CRM</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,244 +20,359 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
 
-        <div class="logo">
-            <div class="logo-icon">S</div>
+        <div class="brand">
+
+            <div class="brand-icon">
+                S
+            </div>
 
             <div>
-                <h2>Support CRM</h2>
-                <span>Customer Support</span>
+                <h2>SupportDesk</h2>
+                <span>Customer CRM</span>
             </div>
+
         </div>
+
 
         <nav class="sidebar-nav">
 
-            <a href="index.html">
+            <a
+                href="index.html"
+                class="nav-item"
+            >
                 <span>▣</span>
                 Dashboard
             </a>
 
-            <a href="create-ticket.html">
+            <a
+                href="create-ticket.html"
+                class="nav-item"
+            >
                 <span>＋</span>
                 Create Ticket
             </a>
 
         </nav>
 
+
+        <div class="sidebar-bottom">
+
+            <div class="status-dot"></div>
+
+            <div>
+                <strong>System Online</strong>
+                <small>Support workspace</small>
+            </div>
+
+        </div>
+
     </aside>
 
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN -->
     <main class="main-content">
 
+        <!-- HEADER -->
         <header class="topbar">
 
             <div>
-                <h1>Ticket Details</h1>
-                <p>View and manage customer support ticket.</p>
+
+                <p class="eyebrow">
+                    TICKET MANAGEMENT
+                </p>
+
+                <h1>
+                    Ticket Details
+                </h1>
+
+                <p class="subtitle">
+                    View and update customer support information.
+                </p>
+
             </div>
 
-            <a href="index.html" class="secondary-btn">
-                ← Back to Dashboard
+
+            <a
+                href="index.html"
+                class="secondary-btn"
+            >
+                ← Back to Tickets
             </a>
 
         </header>
 
 
-        <!-- TICKET HEADER -->
-        <section class="details-card">
-
-            <div class="ticket-heading">
-
-                <div>
-                    <span class="ticket-label">Ticket ID</span>
-                    <h2 id="ticketId">Loading...</h2>
-                </div>
-
-                <span id="ticketStatus" class="status-badge open">
-                    Open
-                </span>
-
-            </div>
+        <!-- DETAIL LAYOUT -->
+        <div class="detail-grid">
 
 
-            <!-- CUSTOMER -->
-            <div class="details-section">
+            <!-- LEFT COLUMN -->
+            <section class="detail-card">
 
-                <h3>Customer Information</h3>
+                <h2>
+                    Ticket Information
+                </h2>
 
-                <div class="details-grid">
 
-                    <div>
-                        <span class="detail-label">Customer Name</span>
-                        <strong id="customerName">Loading...</strong>
+                <!-- TICKET ID -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Ticket ID
                     </div>
 
-                    <div>
-                        <span class="detail-label">Email</span>
-                        <strong id="customerEmail">Loading...</strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- ISSUE -->
-            <div class="details-section">
-
-                <h3>Issue Information</h3>
-
-                <div class="issue-box">
-
-                    <span class="detail-label">Issue Title</span>
-
-                    <h2 id="subject">
+                    <div
+                        class="detail-value ticket-number"
+                        id="ticketId"
+                    >
                         Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- CUSTOMER NAME -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Customer Name
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="customerName"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- CUSTOMER EMAIL -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Customer Email
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="customerEmail"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- ISSUE -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Issue Title
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="subject"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- DESCRIPTION -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Issue Description
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="description"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- PRIORITY -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Priority
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="ticketPriority"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- SLA -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        SLA Status
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="slaStatus"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- CREATED -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Created At
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="createdAt"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+
+                <!-- UPDATED -->
+                <div class="detail-row">
+
+                    <div class="detail-label">
+                        Last Updated
+                    </div>
+
+                    <div
+                        class="detail-value"
+                        id="updatedAt"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- RIGHT COLUMN -->
+            <div>
+
+
+                <!-- UPDATE CARD -->
+                <section class="detail-card">
+
+                    <h2>
+                        Update Ticket
                     </h2>
 
-                    <p id="description">
-                        Loading...
-                    </p>
 
-                </div>
+                    <div class="form-group">
 
-            </div>
+                        <label for="status">
+                            Ticket Status
+                        </label>
 
+                        <select id="status">
 
-            <!-- EXTRA FEATURE -->
-            <div class="details-section">
+                            <option value="Open">
+                                Open
+                            </option>
 
-                <h3>Priority & SLA</h3>
+                            <option value="In Progress">
+                                In Progress
+                            </option>
 
-                <div class="priority-sla-grid">
+                            <option value="Closed">
+                                Closed
+                            </option>
 
-                    <div class="info-box">
-
-                        <span class="detail-label">
-                            Priority
-                        </span>
-
-                        <span id="ticketPriority" class="priority-badge medium">
-                            Medium
-                        </span>
+                        </select>
 
                     </div>
 
 
-                    <div class="info-box">
+                    <div class="form-group">
 
-                        <span class="detail-label">
-                            SLA Status
-                        </span>
+                        <label for="newNote">
+                            Add Note / Comment
+                        </label>
 
-                        <span id="slaStatus" class="sla-badge">
-                            Within SLA
-                        </span>
+                        <textarea
+                            id="newNote"
+                            placeholder="Write a note about this ticket..."
+                        ></textarea>
 
                     </div>
 
-                </div>
 
-            </div>
+                    <button
+                        type="button"
+                        id="saveChangesBtn"
+                        class="primary-btn"
+                        style="width:100%;"
+                    >
+                        Save Changes
+                    </button>
 
-
-            <!-- STATUS UPDATE -->
-            <div class="details-section">
-
-                <h3>Update Ticket</h3>
-
-                <div class="form-group">
-
-                    <label for="status">
-                        Ticket Status
-                    </label>
-
-                    <select id="status">
-
-                        <option value="Open">
-                            Open
-                        </option>
-
-                        <option value="In Progress">
-                            In Progress
-                        </option>
-
-                        <option value="Closed">
-                            Closed
-                        </option>
-
-                    </select>
-
-                </div>
-
-            </div>
+                </section>
 
 
-            <!-- NOTES -->
-            <div class="details-section">
-
-                <h3>Notes & Comments</h3>
-
-                <div id="notesContainer" class="notes-container">
-
-                    <div class="empty-notes">
-                        No notes added yet.
-                    </div>
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label for="newNote">
-                        Add Note
-                    </label>
-
-                    <textarea
-                        id="newNote"
-                        rows="4"
-                        placeholder="Write an internal note or comment..."
-                    ></textarea>
-
-                </div>
-
-            </div>
-
-
-            <!-- METADATA -->
-            <div class="metadata">
-
-                <div>
-                    <span>Created</span>
-                    <strong id="createdAt">-</strong>
-                </div>
-
-                <div>
-                    <span>Last Updated</span>
-                    <strong id="updatedAt">-</strong>
-                </div>
-
-            </div>
-
-
-            <!-- ACTIONS -->
-            <div class="form-actions">
-
-                <a href="index.html" class="secondary-btn">
-                    Cancel
-                </a>
-
-                <button
-                    type="button"
-                    id="saveChangesBtn"
-                    class="primary-btn"
+                <!-- NOTES CARD -->
+                <section
+                    class="detail-card"
+                    style="margin-top:20px;"
                 >
-                    Save Changes
-                </button>
+
+                    <h2>
+                        Notes & Comments
+                    </h2>
+
+
+                    <div
+                        id="notesContainer"
+                        class="notes-list"
+                    >
+
+                        <div class="loading-row">
+                            Loading notes...
+                        </div>
+
+                    </div>
+
+                </section>
 
             </div>
 
-        </section>
+        </div>
+
+
+        <!-- FOOTER -->
+        <footer class="footer">
+
+            <span>
+                SupportDesk CRM
+            </span>
+
+            <span>
+                Customer Support Ticketing System
+            </span>
+
+        </footer>
 
     </main>
 
