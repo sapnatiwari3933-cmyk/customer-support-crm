@@ -1,1 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Details - Support CRM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-icon">S</div>
+
+            <div>
+                <h2>Support CRM</h2>
+                <span>Customer Support</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a href="index.html">
+                <span>▣</span>
+                Dashboard
+            </a>
+
+            <a href="create-ticket.html">
+                <span>＋</span>
+                Create Ticket
+            </a>
+
+        </nav>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+                <h1>Ticket Details</h1>
+                <p>View and manage customer support ticket.</p>
+            </div>
+
+            <a href="index.html" class="secondary-btn">
+                ← Back to Dashboard
+            </a>
+
+        </header>
+
+
+        <!-- TICKET HEADER -->
+        <section class="details-card">
+
+            <div class="ticket-heading">
+
+                <div>
+                    <span class="ticket-label">Ticket ID</span>
+                    <h2 id="ticketId">Loading...</h2>
+                </div>
+
+                <span id="ticketStatus" class="status-badge open">
+                    Open
+                </span>
+
+            </div>
+
+
+            <!-- CUSTOMER -->
+            <div class="details-section">
+
+                <h3>Customer Information</h3>
+
+                <div class="details-grid">
+
+                    <div>
+                        <span class="detail-label">Customer Name</span>
+                        <strong id="customerName">Loading...</strong>
+                    </div>
+
+                    <div>
+                        <span class="detail-label">Email</span>
+                        <strong id="customerEmail">Loading...</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ISSUE -->
+            <div class="details-section">
+
+                <h3>Issue Information</h3>
+
+                <div class="issue-box">
+
+                    <span class="detail-label">Issue Title</span>
+
+                    <h2 id="subject">
+                        Loading...
+                    </h2>
+
+                    <p id="description">
+                        Loading...
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- EXTRA FEATURE -->
+            <div class="details-section">
+
+                <h3>Priority & SLA</h3>
+
+                <div class="priority-sla-grid">
+
+                    <div class="info-box">
+
+                        <span class="detail-label">
+                            Priority
+                        </span>
+
+                        <span id="ticketPriority" class="priority-badge medium">
+                            Medium
+                        </span>
+
+                    </div>
+
+
+                    <div class="info-box">
+
+                        <span class="detail-label">
+                            SLA Status
+                        </span>
+
+                        <span id="slaStatus" class="sla-badge">
+                            Within SLA
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- STATUS UPDATE -->
+            <div class="details-section">
+
+                <h3>Update Ticket</h3>
+
+                <div class="form-group">
+
+                    <label for="status">
+                        Ticket Status
+                    </label>
+
+                    <select id="status">
+
+                        <option value="Open">
+                            Open
+                        </option>
+
+                        <option value="In Progress">
+                            In Progress
+                        </option>
+
+                        <option value="Closed">
+                            Closed
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- NOTES -->
+            <div class="details-section">
+
+                <h3>Notes & Comments</h3>
+
+                <div id="notesContainer" class="notes-container">
+
+                    <div class="empty-notes">
+                        No notes added yet.
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="newNote">
+                        Add Note
+                    </label>
+
+                    <textarea
+                        id="newNote"
+                        rows="4"
+                        placeholder="Write an internal note or comment..."
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+
+            <!-- METADATA -->
+            <div class="metadata">
+
+                <div>
+                    <span>Created</span>
+                    <strong id="createdAt">-</strong>
+                </div>
+
+                <div>
+                    <span>Last Updated</span>
+                    <strong id="updatedAt">-</strong>
+                </div>
+
+            </div>
+
+
+            <!-- ACTIONS -->
+            <div class="form-actions">
+
+                <a href="index.html" class="secondary-btn">
+                    Cancel
+                </a>
+
+                <button
+                    type="button"
+                    id="saveChangesBtn"
+                    class="primary-btn"
+                >
+                    Save Changes
+                </button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="script.js"></script>
+
+</body>
+</html>
