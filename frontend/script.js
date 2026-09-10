@@ -9,8 +9,7 @@
 /* =========================================================
    API CONFIGURATION
 ========================================================= */
-
-const API_BASE = "http://localhost:5000/api/tickets";
+const API_BASE = "https://customer-support-crm-backend.onrender.com/api/tickets";
 
 
 /* =========================================================
