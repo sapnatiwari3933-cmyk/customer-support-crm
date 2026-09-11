@@ -5,18 +5,34 @@ const db = require("./database");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// =====================================================
+// MIDDLEWARE
+// =====================================================
+
 app.use(cors());
 app.use(express.json());
 
 
 // =====================================================
-// Helper: Generate Ticket ID
+// HELPERS
 // =====================================================
 
 function generateTicketId() {
     return `TCK-${Date.now()}`;
 }
+
+const allowedStatuses = [
+    "Open",
+    "In Progress",
+    "Closed"
+];
+
+const allowedPriorities = [
+    "Low",
+    "Medium",
+    "High",
+    "Urgent"
+];
 
 
 // =====================================================
@@ -30,7 +46,8 @@ app.post("/api/tickets", (req, res) => {
         customer_name,
         customer_email,
         subject,
-        description
+        description,
+        priority
     } = req.body;
 
     if (
@@ -45,6 +62,11 @@ app.post("/api/tickets", (req, res) => {
         });
     }
 
+    const selectedPriority =
+        priority && allowedPriorities.includes(priority)
+            ? priority
+            : "Medium";
+
     const ticketId = generateTicketId();
 
     const sql = `
@@ -55,20 +77,22 @@ app.post("/api/tickets", (req, res) => {
             customer_email,
             subject,
             description,
-            status
+            status,
+            priority
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.run(
         sql,
         [
             ticketId,
-            customer_name,
-            customer_email,
-            subject,
-            description,
-            "Open"
+            customer_name.trim(),
+            customer_email.trim(),
+            subject.trim(),
+            description.trim(),
+            "Open",
+            selectedPriority
         ],
         function (err) {
 
@@ -82,11 +106,19 @@ app.post("/api/tickets", (req, res) => {
             }
 
             db.get(
-                `SELECT created_at FROM tickets WHERE ticket_id = ?`,
+                `
+                SELECT
+                    ticket_id,
+                    created_at
+                FROM tickets
+                WHERE ticket_id = ?
+                `,
                 [ticketId],
                 (err, row) => {
 
                     if (err) {
+                        console.error(err);
+
                         return res.status(500).json({
                             success: false,
                             message: "Ticket created but timestamp could not be retrieved."
@@ -94,7 +126,8 @@ app.post("/api/tickets", (req, res) => {
                     }
 
                     res.status(201).json({
-                        ticket_id: ticketId,
+                        success: true,
+                        ticket_id: row.ticket_id,
                         created_at: row.created_at
                     });
 
@@ -108,6 +141,7 @@ app.post("/api/tickets", (req, res) => {
 // =====================================================
 // 2. GET ALL TICKETS
 // GET /api/tickets
+//
 // Optional:
 // ?status=Open
 // ?search=Rahul
@@ -125,6 +159,7 @@ app.get("/api/tickets", (req, res) => {
             subject,
             description,
             status,
+            priority,
             created_at,
             updated_at
         FROM tickets
@@ -133,14 +168,29 @@ app.get("/api/tickets", (req, res) => {
 
     const params = [];
 
-    // Status filter
+    // =================================================
+    // STATUS FILTER
+    // =================================================
+
     if (status && status !== "All") {
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid status filter."
+            });
+        }
+
         sql += ` AND status = ?`;
         params.push(status);
     }
 
-    // Search
-    if (search) {
+
+    // =================================================
+    // SEARCH
+    // =================================================
+
+    if (search && search.trim() !== "") {
 
         sql += `
             AND (
@@ -152,7 +202,7 @@ app.get("/api/tickets", (req, res) => {
             )
         `;
 
-        const searchValue = `%${search}%`;
+        const searchValue = `%${search.trim()}%`;
 
         params.push(
             searchValue,
@@ -163,7 +213,10 @@ app.get("/api/tickets", (req, res) => {
         );
     }
 
+
+    // Newest first
     sql += ` ORDER BY created_at DESC`;
+
 
     db.all(sql, params, (err, rows) => {
 
@@ -198,68 +251,84 @@ app.get("/api/tickets/:ticket_id", (req, res) => {
             subject,
             description,
             status,
+            priority,
             created_at,
             updated_at
         FROM tickets
         WHERE ticket_id = ?
     `;
 
-    db.get(ticketSql, [ticket_id], (err, ticket) => {
-
-        if (err) {
-            console.error(err);
-
-            return res.status(500).json({
-                success: false,
-                message: "Failed to fetch ticket."
-            });
-        }
-
-        if (!ticket) {
-            return res.status(404).json({
-                success: false,
-                message: "Ticket not found."
-            });
-        }
-
-        const notesSql = `
-            SELECT
-                id,
-                ticket_id,
-                note_text,
-                created_at
-            FROM notes
-            WHERE ticket_id = ?
-            ORDER BY created_at DESC
-        `;
-
-        db.all(notesSql, [ticket_id], (err, notes) => {
+    db.get(
+        ticketSql,
+        [ticket_id],
+        (err, ticket) => {
 
             if (err) {
                 console.error(err);
 
                 return res.status(500).json({
                     success: false,
-                    message: "Failed to fetch notes."
+                    message: "Failed to fetch ticket."
                 });
             }
 
-            res.json({
-                ...ticket,
-                notes: notes
-            });
+            if (!ticket) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Ticket not found."
+                });
+            }
 
-        });
-    });
+
+            // =========================================
+            // GET NOTES
+            // =========================================
+
+            const notesSql = `
+                SELECT
+                    id,
+                    ticket_id,
+                    note_text,
+                    created_at
+                FROM notes
+                WHERE ticket_id = ?
+                ORDER BY created_at DESC
+            `;
+
+            db.all(
+                notesSql,
+                [ticket_id],
+                (err, notes) => {
+
+                    if (err) {
+                        console.error(err);
+
+                        return res.status(500).json({
+                            success: false,
+                            message: "Failed to fetch notes."
+                        });
+                    }
+
+                    res.json({
+                        ...ticket,
+                        notes: notes || []
+                    });
+
+                }
+            );
+        }
+    );
 });
 
 
 // =====================================================
 // 4. UPDATE TICKET
 // PUT /api/tickets/:ticket_id
+//
 // Body:
 // {
 //   "status": "In Progress",
+//   "priority": "High",
 //   "notes": "Customer contacted."
 // }
 // =====================================================
@@ -267,34 +336,81 @@ app.get("/api/tickets/:ticket_id", (req, res) => {
 app.put("/api/tickets/:ticket_id", (req, res) => {
 
     const { ticket_id } = req.params;
-    const { status, notes } = req.body;
 
-    const allowedStatuses = [
-        "Open",
-        "In Progress",
-        "Closed"
-    ];
+    const {
+        status,
+        priority,
+        notes
+    } = req.body;
+
+
+    // =================================================
+    // VALIDATE STATUS
+    // =================================================
 
     if (!status || !allowedStatuses.includes(status)) {
+
         return res.status(400).json({
             success: false,
             message: "Invalid status."
         });
     }
 
-    const updatedAt = new Date().toISOString();
 
-    const updateSql = `
-        UPDATE tickets
-        SET
-            status = ?,
-            updated_at = ?
-        WHERE ticket_id = ?
-    `;
+    // =================================================
+    // VALIDATE PRIORITY
+    // =================================================
+
+    const selectedPriority =
+        priority && allowedPriorities.includes(priority)
+            ? priority
+            : null;
+
+
+    // =================================================
+    // UPDATE TICKET
+    // =================================================
+
+    let updateSql;
+    let updateParams;
+
+    if (selectedPriority) {
+
+        updateSql = `
+            UPDATE tickets
+            SET
+                status = ?,
+                priority = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE ticket_id = ?
+        `;
+
+        updateParams = [
+            status,
+            selectedPriority,
+            ticket_id
+        ];
+
+    } else {
+
+        updateSql = `
+            UPDATE tickets
+            SET
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE ticket_id = ?
+        `;
+
+        updateParams = [
+            status,
+            ticket_id
+        ];
+    }
+
 
     db.run(
         updateSql,
-        [status, updatedAt, ticket_id],
+        updateParams,
         function (err) {
 
             if (err) {
@@ -306,15 +422,26 @@ app.put("/api/tickets/:ticket_id", (req, res) => {
                 });
             }
 
+
+            // Ticket doesn't exist
             if (this.changes === 0) {
+
                 return res.status(404).json({
                     success: false,
                     message: "Ticket not found."
                 });
             }
 
-            // Add note if provided
-            if (notes && notes.trim() !== "") {
+
+            // =========================================
+            // ADD NOTE
+            // =========================================
+
+            if (
+                notes &&
+                typeof notes === "string" &&
+                notes.trim() !== ""
+            ) {
 
                 const noteSql = `
                     INSERT INTO notes
@@ -327,7 +454,10 @@ app.put("/api/tickets/:ticket_id", (req, res) => {
 
                 db.run(
                     noteSql,
-                    [ticket_id, notes.trim()],
+                    [
+                        ticket_id,
+                        notes.trim()
+                    ],
                     (err) => {
 
                         if (err) {
@@ -339,21 +469,50 @@ app.put("/api/tickets/:ticket_id", (req, res) => {
                             });
                         }
 
-                        return res.json({
-                            success: true,
-                            updated_at: updatedAt
-                        });
+                        return getUpdatedTicket();
                     }
                 );
 
             } else {
 
-                return res.json({
-                    success: true,
-                    updated_at: updatedAt
-                });
-
+                return getUpdatedTicket();
             }
+
+
+            // =========================================
+            // RETURN UPDATED TIMESTAMP
+            // =========================================
+
+            function getUpdatedTicket() {
+
+                db.get(
+                    `
+                    SELECT
+                        updated_at
+                    FROM tickets
+                    WHERE ticket_id = ?
+                    `,
+                    [ticket_id],
+                    (err, row) => {
+
+                        if (err) {
+                            console.error(err);
+
+                            return res.status(500).json({
+                                success: false,
+                                message: "Ticket updated but timestamp could not be retrieved."
+                            });
+                        }
+
+                        return res.json({
+                            success: true,
+                            updated_at: row.updated_at
+                        });
+
+                    }
+                );
+            }
+
         }
     );
 });
@@ -378,5 +537,9 @@ app.get("/", (req, res) => {
 // =====================================================
 
 app.listen(PORT, () => {
-    console.log(`SupportDesk CRM server running on port ${PORT}`);
+
+    console.log(
+        `SupportDesk CRM server running on port ${PORT}`
+    );
+
 });
