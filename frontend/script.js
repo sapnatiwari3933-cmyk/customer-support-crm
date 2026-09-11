@@ -20,15 +20,6 @@ let allTickets = [];
    HELPER FUNCTIONS
 ========================================================= */
 
-/*
-   Convert backend SQLite UTC date into a proper
-   JavaScript Date object.
-
-   SQLite CURRENT_TIMESTAMP example:
-   2026-09-11 08:45:00
-
-   This value is UTC, so we explicitly add Z.
-*/
 function parseBackendDate(dateValue) {
 
     if (!dateValue) {
@@ -37,10 +28,6 @@ function parseBackendDate(dateValue) {
 
     let value = String(dateValue).trim();
 
-    /*
-       SQLite format:
-       YYYY-MM-DD HH:MM:SS
-    */
     if (
         /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
     ) {
@@ -58,9 +45,6 @@ function parseBackendDate(dateValue) {
 }
 
 
-/*
-   Display date/time in Indian local time.
-*/
 function formatDate(dateValue) {
 
     if (!dateValue) {
@@ -85,9 +69,6 @@ function formatDate(dateValue) {
 }
 
 
-/*
-   Escape HTML to prevent unsafe HTML injection.
-*/
 function escapeHTML(value) {
 
     if (
@@ -106,9 +87,6 @@ function escapeHTML(value) {
 }
 
 
-/*
-   Status CSS class.
-*/
 function getStatusClass(status) {
 
     if (status === "Open") {
@@ -127,9 +105,6 @@ function getStatusClass(status) {
 }
 
 
-/*
-   Priority CSS class.
-*/
 function getPriorityClass(priority) {
 
     if (priority === "High") {
@@ -144,22 +119,12 @@ function getPriorityClass(priority) {
 }
 
 
-/*
-   Priority is currently optional in the backend.
-   If no priority comes from API, show Medium.
-*/
 function getPriority(ticket) {
 
     return ticket.priority || "Medium";
 }
 
 
-/*
-   SLA calculation.
-
-   Uses the same UTC-aware date parser so that
-   timezone differences do not affect the result.
-*/
 function getSLAInfo(ticket) {
 
     if (
@@ -743,6 +708,22 @@ async function createTicket(event) {
         description.value.trim();
 
 
+    /* ---------------------------------------------
+       PRIORITY
+    --------------------------------------------- */
+
+    const priorityElement =
+        document.getElementById(
+            "priority"
+        );
+
+
+    const priority =
+        priorityElement
+            ? priorityElement.value
+            : "Medium";
+
+
     if (
         !customer_name ||
         !customer_email ||
@@ -816,7 +797,10 @@ async function createTicket(event) {
                             subjectValue,
 
                         description:
-                            descriptionValue
+                            descriptionValue,
+
+                        priority:
+                            priority
                     })
                 }
             );
@@ -1503,4 +1487,4 @@ document.addEventListener(
         }
 
     }
-);
+)
