@@ -10,7 +10,11 @@ const db = new sqlite3.Database("./supportdesk.db", (err) => {
 
 db.serialize(() => {
 
-    // Tickets table
+    
+    db.run(`PRAGMA foreign_keys = ON`);
+
+
+
     db.run(`
         CREATE TABLE IF NOT EXISTS tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,19 +24,22 @@ db.serialize(() => {
             subject TEXT NOT NULL,
             description TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'Open',
+            priority TEXT NOT NULL DEFAULT 'Medium',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
-    // Notes table
+
     db.run(`
         CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticket_id TEXT NOT NULL,
             note_text TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(ticket_id)
+            FOREIGN KEY (ticket_id)
+                REFERENCES tickets(ticket_id)
+                ON DELETE CASCADE
         )
     `);
 
