@@ -1,10 +1,5 @@
-/* =========================================================
-   SUPPORTDESK CRM
-   Main JavaScript
-   Frontend + Backend API Integration
-========================================================= */
-
 "use strict";
+
 
 /* =========================================================
    API CONFIGURATION
@@ -25,15 +20,58 @@ let allTickets = [];
    HELPER FUNCTIONS
 ========================================================= */
 
+/*
+   Convert backend SQLite UTC date into a proper
+   JavaScript Date object.
+
+   SQLite CURRENT_TIMESTAMP example:
+   2026-09-11 08:45:00
+
+   This value is UTC, so we explicitly add Z.
+*/
+function parseBackendDate(dateValue) {
+
+    if (!dateValue) {
+        return null;
+    }
+
+    let value = String(dateValue).trim();
+
+    /*
+       SQLite format:
+       YYYY-MM-DD HH:MM:SS
+    */
+    if (
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ) {
+        value =
+            value.replace(" ", "T") + "Z";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date;
+}
+
+
+/*
+   Display date/time in Indian local time.
+*/
 function formatDate(dateValue) {
+
     if (!dateValue) {
         return "N/A";
     }
 
-    const date = new Date(dateValue);
+    const date =
+        parseBackendDate(dateValue);
 
-    if (Number.isNaN(date.getTime())) {
-        return dateValue;
+    if (!date) {
+        return String(dateValue);
     }
 
     return date.toLocaleString("en-IN", {
@@ -41,13 +79,21 @@ function formatDate(dateValue) {
         month: "short",
         year: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        hour12: true
     });
 }
 
 
+/*
+   Escape HTML to prevent unsafe HTML injection.
+*/
 function escapeHTML(value) {
-    if (value === null || value === undefined) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
         return "";
     }
 
@@ -60,7 +106,11 @@ function escapeHTML(value) {
 }
 
 
+/*
+   Status CSS class.
+*/
 function getStatusClass(status) {
+
     if (status === "Open") {
         return "status-open";
     }
@@ -77,7 +127,11 @@ function getStatusClass(status) {
 }
 
 
+/*
+   Priority CSS class.
+*/
 function getPriorityClass(priority) {
+
     if (priority === "High") {
         return "priority-high";
     }
@@ -90,45 +144,86 @@ function getPriorityClass(priority) {
 }
 
 
+/*
+   Priority is currently optional in the backend.
+   If no priority comes from API, show Medium.
+*/
 function getPriority(ticket) {
+
     return ticket.priority || "Medium";
 }
 
 
+/*
+   SLA calculation.
+
+   Uses the same UTC-aware date parser so that
+   timezone differences do not affect the result.
+*/
 function getSLAInfo(ticket) {
-    if (!ticket || !ticket.created_at) {
+
+    if (
+        !ticket ||
+        !ticket.created_at
+    ) {
         return {
             text: "N/A",
             className: "sla-ok"
         };
     }
 
+
     if (ticket.status === "Closed") {
+
         return {
             text: "Resolved",
             className: "sla-ok"
         };
     }
 
-    const createdTime = new Date(ticket.created_at).getTime();
-    const now = Date.now();
+
+    const createdDate =
+        parseBackendDate(ticket.created_at);
+
+
+    if (!createdDate) {
+
+        return {
+            text: "N/A",
+            className: "sla-ok"
+        };
+    }
+
+
+    const createdTime =
+        createdDate.getTime();
+
+    const now =
+        Date.now();
+
 
     const hoursPassed =
-        (now - createdTime) / (1000 * 60 * 60);
+        (now - createdTime) /
+        (1000 * 60 * 60);
+
 
     if (hoursPassed > 24) {
+
         return {
             text: "Overdue",
             className: "sla-overdue"
         };
     }
 
+
     if (hoursPassed > 20) {
+
         return {
             text: "Due Soon",
             className: "sla-warning"
         };
     }
+
 
     return {
         text: "Within SLA",
@@ -142,10 +237,15 @@ function getSLAInfo(ticket) {
 ========================================================= */
 
 async function loadTickets() {
+
     const tableBody =
-        document.getElementById("ticketTableBody");
+        document.getElementById(
+            "ticketTableBody"
+        );
+
 
     if (tableBody) {
+
         tableBody.innerHTML = `
             <tr>
                 <td colspan="8" class="loading-row">
@@ -155,31 +255,51 @@ async function loadTickets() {
         `;
     }
 
+
     try {
-        const response = await fetch(API_BASE);
+
+        const response =
+            await fetch(API_BASE);
+
 
         if (!response.ok) {
+
             throw new Error(
                 `Server returned ${response.status}`
             );
         }
 
-        const data = await response.json();
 
-        allTickets = Array.isArray(data) ? data : [];
+        const data =
+            await response.json();
+
+
+        allTickets =
+            Array.isArray(data)
+                ? data
+                : [];
+
 
         renderTickets(allTickets);
-        updateDashboardStats(allTickets);
+
+        updateDashboardStats(
+            allTickets
+        );
+
 
     } catch (error) {
+
         console.error(
             "Failed to load tickets:",
             error
         );
 
+
         allTickets = [];
 
+
         if (tableBody) {
+
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="8" class="loading-row">
@@ -189,6 +309,7 @@ async function loadTickets() {
                 </tr>
             `;
         }
+
 
         updateDashboardStats([]);
     }
@@ -200,109 +321,169 @@ async function loadTickets() {
 ========================================================= */
 
 function renderTickets(tickets) {
+
     const tableBody =
-        document.getElementById("ticketTableBody");
+        document.getElementById(
+            "ticketTableBody"
+        );
+
 
     const emptyState =
-        document.getElementById("emptyState");
+        document.getElementById(
+            "emptyState"
+        );
+
 
     if (!tableBody) {
         return;
     }
 
-    if (!tickets || tickets.length === 0) {
+
+    if (
+        !tickets ||
+        tickets.length === 0
+    ) {
+
         tableBody.innerHTML = "";
 
+
         if (emptyState) {
-            emptyState.style.display = "block";
+            emptyState.style.display =
+                "block";
         }
+
 
         return;
     }
 
+
     if (emptyState) {
-        emptyState.style.display = "none";
+        emptyState.style.display =
+            "none";
     }
 
-    tableBody.innerHTML = tickets
-        .map((ticket) => {
 
-            const statusClass =
-                getStatusClass(ticket.status);
+    tableBody.innerHTML =
+        tickets
+            .map((ticket) => {
 
-            const priority =
-                getPriority(ticket);
+                const statusClass =
+                    getStatusClass(
+                        ticket.status
+                    );
 
-            const priorityClass =
-                getPriorityClass(priority);
 
-            const sla =
-                getSLAInfo(ticket);
+                const priority =
+                    getPriority(ticket);
 
-            return `
-                <tr>
 
-                    <td>
-                        <span class="ticket-number">
-                            ${escapeHTML(ticket.ticket_id)}
-                        </span>
-                    </td>
+                const priorityClass =
+                    getPriorityClass(
+                        priority
+                    );
 
-                    <td>
-                        <div class="customer-name">
-                            ${escapeHTML(ticket.customer_name)}
-                        </div>
 
-                        <div class="customer-email">
-                            ${escapeHTML(ticket.customer_email)}
-                        </div>
-                    </td>
+                const sla =
+                    getSLAInfo(ticket);
 
-                    <td>
-                        <div class="issue-title">
-                            ${escapeHTML(ticket.subject)}
-                        </div>
 
-                        <div class="issue-description">
-                            ${escapeHTML(ticket.description)}
-                        </div>
-                    </td>
+                return `
+                    <tr>
 
-                    <td>
-                        <span class="status-badge ${statusClass}">
-                            ${escapeHTML(ticket.status)}
-                        </span>
-                    </td>
+                        <td>
+                            <span class="ticket-number">
+                                ${escapeHTML(
+                                    ticket.ticket_id
+                                )}
+                            </span>
+                        </td>
 
-                    <td>
-                        <span class="priority-badge ${priorityClass}">
-                            ${escapeHTML(priority)}
-                        </span>
-                    </td>
 
-                    <td>
-                        <span class="sla-badge ${sla.className}">
-                            ${escapeHTML(sla.text)}
-                        </span>
-                    </td>
+                        <td>
+                            <div class="customer-name">
+                                ${escapeHTML(
+                                    ticket.customer_name
+                                )}
+                            </div>
 
-                    <td>
-                        ${formatDate(ticket.created_at)}
-                    </td>
+                            <div class="customer-email">
+                                ${escapeHTML(
+                                    ticket.customer_email
+                                )}
+                            </div>
+                        </td>
 
-                    <td>
-                        <a
-                            href="ticket-details.html?id=${encodeURIComponent(ticket.ticket_id)}"
-                            class="view-btn"
-                        >
-                            View
-                        </a>
-                    </td>
 
-                </tr>
-            `;
-        })
-        .join("");
+                        <td>
+                            <div class="issue-title">
+                                ${escapeHTML(
+                                    ticket.subject
+                                )}
+                            </div>
+
+                            <div class="issue-description">
+                                ${escapeHTML(
+                                    ticket.description
+                                )}
+                            </div>
+                        </td>
+
+
+                        <td>
+                            <span
+                                class="status-badge ${statusClass}"
+                            >
+                                ${escapeHTML(
+                                    ticket.status
+                                )}
+                            </span>
+                        </td>
+
+
+                        <td>
+                            <span
+                                class="priority-badge ${priorityClass}"
+                            >
+                                ${escapeHTML(
+                                    priority
+                                )}
+                            </span>
+                        </td>
+
+
+                        <td>
+                            <span
+                                class="sla-badge ${sla.className}"
+                            >
+                                ${escapeHTML(
+                                    sla.text
+                                )}
+                            </span>
+                        </td>
+
+
+                        <td>
+                            ${formatDate(
+                                ticket.created_at
+                            )}
+                        </td>
+
+
+                        <td>
+                            <a
+                                href="ticket-details.html?id=${encodeURIComponent(
+                                    ticket.ticket_id
+                                )}"
+                                class="view-btn"
+                            >
+                                View
+                            </a>
+                        </td>
+
+                    </tr>
+                `;
+            })
+            .join("");
 }
 
 
@@ -313,64 +494,100 @@ function renderTickets(tickets) {
 function updateDashboardStats(tickets) {
 
     const totalElement =
-        document.getElementById("totalTickets");
+        document.getElementById(
+            "totalTickets"
+        );
+
 
     const openElement =
-        document.getElementById("openTickets");
+        document.getElementById(
+            "openTickets"
+        );
+
 
     const progressElement =
-        document.getElementById("progressTickets");
+        document.getElementById(
+            "progressTickets"
+        );
+
 
     const closedElement =
-        document.getElementById("closedTickets");
+        document.getElementById(
+            "closedTickets"
+        );
+
 
     const overdueElement =
-        document.getElementById("overdueTickets");
+        document.getElementById(
+            "overdueTickets"
+        );
 
 
     const total =
         tickets.length;
 
+
     const open =
         tickets.filter(
-            ticket => ticket.status === "Open"
+            ticket =>
+                ticket.status === "Open"
         ).length;
+
 
     const progress =
         tickets.filter(
-            ticket => ticket.status === "In Progress"
+            ticket =>
+                ticket.status === "In Progress"
         ).length;
+
 
     const closed =
         tickets.filter(
-            ticket => ticket.status === "Closed"
+            ticket =>
+                ticket.status === "Closed"
         ).length;
+
 
     const overdue =
         tickets.filter(ticket => {
-            const sla = getSLAInfo(ticket);
-            return sla.text === "Overdue";
+
+            const sla =
+                getSLAInfo(ticket);
+
+            return (
+                sla.text === "Overdue"
+            );
+
         }).length;
 
 
     if (totalElement) {
-        totalElement.textContent = total;
+        totalElement.textContent =
+            total;
     }
+
 
     if (openElement) {
-        openElement.textContent = open;
+        openElement.textContent =
+            open;
     }
+
 
     if (progressElement) {
-        progressElement.textContent = progress;
+        progressElement.textContent =
+            progress;
     }
+
 
     if (closedElement) {
-        closedElement.textContent = closed;
+        closedElement.textContent =
+            closed;
     }
 
+
     if (overdueElement) {
-        overdueElement.textContent = overdue;
+        overdueElement.textContent =
+            overdue;
     }
 }
 
@@ -382,16 +599,24 @@ function updateDashboardStats(tickets) {
 function applyFilters() {
 
     const searchInput =
-        document.getElementById("searchInput");
+        document.getElementById(
+            "searchInput"
+        );
+
 
     const statusFilter =
-        document.getElementById("statusFilter");
+        document.getElementById(
+            "statusFilter"
+        );
 
 
     const search =
         searchInput
-            ? searchInput.value.trim().toLowerCase()
+            ? searchInput.value
+                .trim()
+                .toLowerCase()
             : "";
+
 
     const status =
         statusFilter
@@ -404,23 +629,34 @@ function applyFilters() {
 
             const matchesSearch =
                 !search ||
-                String(ticket.ticket_id || "")
+
+                String(
+                    ticket.ticket_id || ""
+                )
                     .toLowerCase()
                     .includes(search) ||
 
-                String(ticket.customer_name || "")
+                String(
+                    ticket.customer_name || ""
+                )
                     .toLowerCase()
                     .includes(search) ||
 
-                String(ticket.customer_email || "")
+                String(
+                    ticket.customer_email || ""
+                )
                     .toLowerCase()
                     .includes(search) ||
 
-                String(ticket.subject || "")
+                String(
+                    ticket.subject || ""
+                )
                     .toLowerCase()
                     .includes(search) ||
 
-                String(ticket.description || "")
+                String(
+                    ticket.description || ""
+                )
                     .toLowerCase()
                     .includes(search);
 
@@ -430,11 +666,16 @@ function applyFilters() {
                 ticket.status === status;
 
 
-            return matchesSearch && matchesStatus;
+            return (
+                matchesSearch &&
+                matchesStatus
+            );
         });
 
 
-    renderTickets(filteredTickets);
+    renderTickets(
+        filteredTickets
+    );
 }
 
 
@@ -448,19 +689,27 @@ async function createTicket(event) {
 
 
     const customerName =
-        document.getElementById("customerName");
+        document.getElementById(
+            "customerName"
+        );
+
 
     const customerEmail =
-        document.getElementById("customerEmail");
+        document.getElementById(
+            "customerEmail"
+        );
+
 
     const subject =
-        document.getElementById("subject");
+        document.getElementById(
+            "subject"
+        );
 
-    const priority =
-        document.getElementById("priority");
 
     const description =
-        document.getElementById("description");
+        document.getElementById(
+            "description"
+        );
 
 
     if (
@@ -469,7 +718,11 @@ async function createTicket(event) {
         !subject ||
         !description
     ) {
-        alert("Required form fields are missing.");
+
+        alert(
+            "Required form fields are missing."
+        );
+
         return;
     }
 
@@ -477,11 +730,14 @@ async function createTicket(event) {
     const customer_name =
         customerName.value.trim();
 
+
     const customer_email =
         customerEmail.value.trim();
 
+
     const subjectValue =
         subject.value.trim();
+
 
     const descriptionValue =
         description.value.trim();
@@ -493,7 +749,11 @@ async function createTicket(event) {
         !subjectValue ||
         !descriptionValue
     ) {
-        alert("Please fill all required fields.");
+
+        alert(
+            "Please fill all required fields."
+        );
+
         return;
     }
 
@@ -502,8 +762,16 @@ async function createTicket(event) {
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 
-    if (!emailPattern.test(customer_email)) {
-        alert("Please enter a valid email address.");
+    if (
+        !emailPattern.test(
+            customer_email
+        )
+    ) {
+
+        alert(
+            "Please enter a valid email address."
+        );
+
         return;
     }
 
@@ -515,35 +783,53 @@ async function createTicket(event) {
 
 
     if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Creating...";
+
+        submitButton.disabled =
+            true;
+
+        submitButton.textContent =
+            "Creating...";
     }
 
 
     try {
 
         const response =
-            await fetch(API_BASE, {
-                method: "POST",
+            await fetch(
+                API_BASE,
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    customer_name: customer_name,
-                    customer_email: customer_email,
-                    subject: subjectValue,
-                    description: descriptionValue
-                })
-            });
+                    body: JSON.stringify({
+                        customer_name:
+                            customer_name,
+
+                        customer_email:
+                            customer_email,
+
+                        subject:
+                            subjectValue,
+
+                        description:
+                            descriptionValue
+                    })
+                }
+            );
 
 
         const data =
-            await response.json().catch(() => ({}));
+            await response
+                .json()
+                .catch(() => ({}));
 
 
         if (!response.ok) {
+
             throw new Error(
                 data.message ||
                 "Failed to create ticket."
@@ -557,7 +843,9 @@ async function createTicket(event) {
 
 
         window.location.href =
-            `ticket-details.html?id=${encodeURIComponent(data.ticket_id)}`;
+            `ticket-details.html?id=${encodeURIComponent(
+                data.ticket_id
+            )}`;
 
 
     } catch (error) {
@@ -567,14 +855,20 @@ async function createTicket(event) {
             error
         );
 
+
         alert(
             "Ticket could not be created.\n\n" +
             "Please check that the backend is running."
         );
 
+
         if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = "Create Ticket";
+
+            submitButton.disabled =
+                false;
+
+            submitButton.textContent =
+                "Create Ticket";
         }
     }
 }
@@ -590,6 +884,7 @@ function getTicketIdFromURL() {
         new URLSearchParams(
             window.location.search
         );
+
 
     return params.get("id");
 }
@@ -619,15 +914,20 @@ async function loadTicketDetails() {
 
         const response =
             await fetch(
-                `${API_BASE}/${encodeURIComponent(ticketId)}`
+                `${API_BASE}/${encodeURIComponent(
+                    ticketId
+                )}`
             );
 
 
         const data =
-            await response.json().catch(() => ({}));
+            await response
+                .json()
+                .catch(() => ({}));
 
 
         if (!response.ok) {
+
             throw new Error(
                 data.message ||
                 "Ticket not found."
@@ -635,7 +935,9 @@ async function loadTicketDetails() {
         }
 
 
-        displayTicketDetails(data);
+        displayTicketDetails(
+            data
+        );
 
 
     } catch (error) {
@@ -644,6 +946,7 @@ async function loadTicketDetails() {
             "Ticket details error:",
             error
         );
+
 
         showDetailError(
             "Unable to load ticket details."
@@ -659,63 +962,102 @@ async function loadTicketDetails() {
 function displayTicketDetails(ticket) {
 
     const ticketIdElement =
-        document.getElementById("ticketId");
+        document.getElementById(
+            "ticketId"
+        );
+
 
     const customerNameElement =
-        document.getElementById("customerName");
+        document.getElementById(
+            "customerName"
+        );
+
 
     const customerEmailElement =
-        document.getElementById("customerEmail");
+        document.getElementById(
+            "customerEmail"
+        );
+
 
     const subjectElement =
-        document.getElementById("subject");
+        document.getElementById(
+            "subject"
+        );
+
 
     const descriptionElement =
-        document.getElementById("description");
+        document.getElementById(
+            "description"
+        );
+
 
     const priorityElement =
-        document.getElementById("ticketPriority");
+        document.getElementById(
+            "ticketPriority"
+        );
+
 
     const slaElement =
-        document.getElementById("slaStatus");
+        document.getElementById(
+            "slaStatus"
+        );
+
 
     const createdAtElement =
-        document.getElementById("createdAt");
+        document.getElementById(
+            "createdAt"
+        );
+
 
     const updatedAtElement =
-        document.getElementById("updatedAt");
+        document.getElementById(
+            "updatedAt"
+        );
+
 
     const statusElement =
-        document.getElementById("status");
+        document.getElementById(
+            "status"
+        );
 
 
     if (ticketIdElement) {
+
         ticketIdElement.textContent =
-            ticket.ticket_id || "N/A";
+            ticket.ticket_id ||
+            "N/A";
     }
 
 
     if (customerNameElement) {
+
         customerNameElement.textContent =
-            ticket.customer_name || "N/A";
+            ticket.customer_name ||
+            "N/A";
     }
 
 
     if (customerEmailElement) {
+
         customerEmailElement.textContent =
-            ticket.customer_email || "N/A";
+            ticket.customer_email ||
+            "N/A";
     }
 
 
     if (subjectElement) {
+
         subjectElement.textContent =
-            ticket.subject || "N/A";
+            ticket.subject ||
+            "N/A";
     }
 
 
     if (descriptionElement) {
+
         descriptionElement.textContent =
-            ticket.description || "N/A";
+            ticket.description ||
+            "N/A";
     }
 
 
@@ -726,8 +1068,14 @@ function displayTicketDetails(ticket) {
     if (priorityElement) {
 
         priorityElement.innerHTML = `
-            <span class="priority-badge ${getPriorityClass(priority)}">
-                ${escapeHTML(priority)}
+            <span
+                class="priority-badge ${getPriorityClass(
+                    priority
+                )}"
+            >
+                ${escapeHTML(
+                    priority
+                )}
             </span>
         `;
     }
@@ -740,32 +1088,46 @@ function displayTicketDetails(ticket) {
     if (slaElement) {
 
         slaElement.innerHTML = `
-            <span class="sla-badge ${sla.className}">
-                ${escapeHTML(sla.text)}
+            <span
+                class="sla-badge ${sla.className}"
+            >
+                ${escapeHTML(
+                    sla.text
+                )}
             </span>
         `;
     }
 
 
     if (createdAtElement) {
+
         createdAtElement.textContent =
-            formatDate(ticket.created_at);
+            formatDate(
+                ticket.created_at
+            );
     }
 
 
     if (updatedAtElement) {
+
         updatedAtElement.textContent =
-            formatDate(ticket.updated_at);
+            formatDate(
+                ticket.updated_at
+            );
     }
 
 
     if (statusElement) {
+
         statusElement.value =
-            ticket.status || "Open";
+            ticket.status ||
+            "Open";
     }
 
 
-    renderNotes(ticket.notes || []);
+    renderNotes(
+        ticket.notes || []
+    );
 }
 
 
@@ -776,7 +1138,9 @@ function displayTicketDetails(ticket) {
 function renderNotes(notes) {
 
     const notesContainer =
-        document.getElementById("notesContainer");
+        document.getElementById(
+            "notesContainer"
+        );
 
 
     if (!notesContainer) {
@@ -784,7 +1148,10 @@ function renderNotes(notes) {
     }
 
 
-    if (!notes || notes.length === 0) {
+    if (
+        !notes ||
+        notes.length === 0
+    ) {
 
         notesContainer.innerHTML = `
             <div class="loading-row">
@@ -797,19 +1164,25 @@ function renderNotes(notes) {
 
 
     notesContainer.innerHTML =
-        notes.map(note => `
-            <div class="note">
+        notes
+            .map(note => `
+                <div class="note">
 
-                <div class="note-text">
-                    ${escapeHTML(note.note_text)}
+                    <div class="note-text">
+                        ${escapeHTML(
+                            note.note_text
+                        )}
+                    </div>
+
+                    <div class="note-date">
+                        ${formatDate(
+                            note.created_at
+                        )}
+                    </div>
+
                 </div>
-
-                <div class="note-date">
-                    ${formatDate(note.created_at)}
-                </div>
-
-            </div>
-        `).join("");
+            `)
+            .join("");
 }
 
 
@@ -822,24 +1195,41 @@ async function updateTicket() {
     const ticketId =
         getTicketIdFromURL();
 
+
     const statusElement =
-        document.getElementById("status");
+        document.getElementById(
+            "status"
+        );
+
 
     const noteElement =
-        document.getElementById("newNote");
+        document.getElementById(
+            "newNote"
+        );
+
 
     const saveButton =
-        document.getElementById("saveChangesBtn");
+        document.getElementById(
+            "saveChangesBtn"
+        );
 
 
     if (!ticketId) {
-        alert("Ticket ID is missing.");
+
+        alert(
+            "Ticket ID is missing."
+        );
+
         return;
     }
 
 
     if (!statusElement) {
-        alert("Status field is missing.");
+
+        alert(
+            "Status field is missing."
+        );
+
         return;
     }
 
@@ -855,8 +1245,12 @@ async function updateTicket() {
 
 
     if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.textContent = "Saving...";
+
+        saveButton.disabled =
+            true;
+
+        saveButton.textContent =
+            "Saving...";
     }
 
 
@@ -864,12 +1258,15 @@ async function updateTicket() {
 
         const response =
             await fetch(
-                `${API_BASE}/${encodeURIComponent(ticketId)}`,
+                `${API_BASE}/${encodeURIComponent(
+                    ticketId
+                )}`,
                 {
                     method: "PUT",
 
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type":
+                            "application/json"
                     },
 
                     body: JSON.stringify({
@@ -881,10 +1278,13 @@ async function updateTicket() {
 
 
         const data =
-            await response.json().catch(() => ({}));
+            await response
+                .json()
+                .catch(() => ({}));
 
 
         if (!response.ok) {
+
             throw new Error(
                 data.message ||
                 "Failed to update ticket."
@@ -912,16 +1312,22 @@ async function updateTicket() {
             error
         );
 
+
         alert(
             error.message ||
             "Unable to update ticket."
         );
 
+
     } finally {
 
         if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.textContent = "Save Changes";
+
+            saveButton.disabled =
+                false;
+
+            saveButton.textContent =
+                "Save Changes";
         }
     }
 }
@@ -934,6 +1340,7 @@ async function updateTicket() {
 function showDetailError(message) {
 
     const elements = [
+
         "ticketId",
         "customerName",
         "customerEmail",
@@ -943,6 +1350,7 @@ function showDetailError(message) {
         "slaStatus",
         "createdAt",
         "updatedAt"
+
     ];
 
 
@@ -951,27 +1359,36 @@ function showDetailError(message) {
         const element =
             document.getElementById(id);
 
+
         if (element) {
-            element.textContent = "";
+
+            element.textContent =
+                "";
         }
     });
 
 
     const ticketIdElement =
-        document.getElementById("ticketId");
+        document.getElementById(
+            "ticketId"
+        );
 
 
     if (ticketIdElement) {
+
         ticketIdElement.textContent =
             message;
     }
 
 
     const notesContainer =
-        document.getElementById("notesContainer");
+        document.getElementById(
+            "notesContainer"
+        );
 
 
     if (notesContainer) {
+
         notesContainer.innerHTML = `
             <div class="loading-row">
                 ${escapeHTML(message)}
@@ -989,6 +1406,7 @@ document.addEventListener(
     "DOMContentLoaded",
     () => {
 
+
         /* ---------------------------------------------
            CREATE TICKET FORM
         --------------------------------------------- */
@@ -1000,6 +1418,7 @@ document.addEventListener(
 
 
         if (createForm) {
+
             createForm.addEventListener(
                 "submit",
                 createTicket
@@ -1035,6 +1454,7 @@ document.addEventListener(
 
 
             if (searchInput) {
+
                 searchInput.addEventListener(
                     "input",
                     applyFilters
@@ -1043,6 +1463,7 @@ document.addEventListener(
 
 
             if (statusFilter) {
+
                 statusFilter.addEventListener(
                     "change",
                     applyFilters
@@ -1080,5 +1501,6 @@ document.addEventListener(
                 );
             }
         }
+
     }
 );
